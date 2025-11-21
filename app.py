@@ -144,9 +144,7 @@ with tab1:
 
                 st.plotly_chart(fig, use_container_width=True, key=f"actplot_{img_name}")
 
-# ---------------------------------------------------
-# TAB 2: COMPARISONS
-# ---------------------------------------------------
+
 # ---------------------------------------------------
 # TAB 2: COMPARISONS
 # ---------------------------------------------------
@@ -249,30 +247,44 @@ with tab3:
     else:
         col1, col2, col3 = st.columns(3)
 
-        # 1) Which type motivates most
+        # =====================================================
+        # 1) What motivates people most?  (BAR CHART)
+        # =====================================================
         with col1:
             motiv_df = gen_df[gen_df["image_name"] == "motivatesMost"].copy()
             if not motiv_df.empty:
                 summary = motiv_df["value"].value_counts().reset_index()
                 summary.columns = ["option", "count"]
+
                 st.markdown("**What motivates people most?**")
-                fig = px.pie(
+
+                fig = px.bar(
                     summary,
-                    names="option",
-                    values="count",
+                    x="option",
+                    y="count",
+                    labels={"option": "Option", "count": "Responses"},
                 )
-                fig.update_traces(textposition="inside", textinfo="percent+label")
+                fig.update_traces(marker_color="#3b82f6", width=0.45)
+                fig.update_layout(
+                    xaxis_tickangle=-35,
+                    bargap=0.35,
+                    height=420,
+                )
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("No data yet for ‘motivatesMost’.")
 
-        # 2) Which type would they ignore
+        # =====================================================
+        # 2) Which type would they ignore? (BAR CHART)
+        # =====================================================
         with col2:
             ignore_df = gen_df[gen_df["image_name"] == "ignore"].copy()
             if not ignore_df.empty:
                 summary = ignore_df["value"].value_counts().reset_index()
                 summary.columns = ["option", "count"]
+
                 st.markdown("**Which messages do people tend to ignore?**")
+
                 fig = px.bar(
                     summary,
                     x="option",
@@ -289,19 +301,29 @@ with tab3:
             else:
                 st.info("No data yet for ‘ignore’.")
 
-        # 3) Frequency preference
+        # =====================================================
+        # 3) Frequency preference (BAR CHART)
+        # =====================================================
         with col3:
             freq_df = gen_df[gen_df["image_name"] == "frequency"].copy()
             if not freq_df.empty:
                 summary = freq_df["value"].value_counts().reset_index()
                 summary.columns = ["option", "count"]
+
                 st.markdown("**Preferred number of messages per week**")
-                fig = px.pie(
+
+                fig = px.bar(
                     summary,
-                    names="option",
-                    values="count",
+                    x="option",
+                    y="count",
+                    labels={"option": "Option", "count": "Responses"},
                 )
-                fig.update_traces(textposition="inside", textinfo="percent+label")
+                fig.update_traces(marker_color="#10b981", width=0.45)
+                fig.update_layout(
+                    xaxis_tickangle=-35,
+                    bargap=0.35,
+                    height=420,
+                )
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("No data yet for ‘frequency’.")
