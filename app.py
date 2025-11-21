@@ -85,95 +85,106 @@ with tab1:
     if ratings_df.empty:
         st.warning("No rating data found yet.")
     else:
-        # Controls
-        col_left, col_right = st.columns(2)
 
-        with col_left:
-            raw_metrics = (
-                ratings_df["metric"]
-                .dropna()
-                .unique()
-                .tolist()
-            )
-            metric_options = [METRIC_LABELS[m] for m in raw_metrics if m in METRIC_LABELS]
+        # Metric selector only (act / mot / trust)
+        raw_metrics = ratings_df["metric"].dropna().unique().tolist()
+        metric_options = [METRIC_LABELS[m] for m in raw_metrics if m in METRIC_LABELS]
 
-            selected_metric_label = st.selectbox(
-                "Rating dimension:",
-                options=sorted(metric_options),
-                index=0,
-            )
-            selected_metric = INV_METRIC_LABELS[selected_metric_label]
-
-        with col_right:
-            image_options = (
-                ratings_df["image_name"]
-                .dropna()
-                .unique()
-                .tolist()
-            )
-            selected_image = st.selectbox(
-                "Image:",
-                options=sorted(image_options),
-                index=0,
-            )
-
-        # filter for selected metric + image
-        filt = (
-            (ratings_df["metric"] == selected_metric)
-            & (ratings_df["image_name"] == selected_image)
+        selected_metric_label = st.selectbox(
+            "Rating type:",
+            options=sorted(metric_options),
+            index=0,
         )
-        img_metric_df = ratings_df[filt].copy()
+        selected_metric = INV_METRIC_LABELS[selected_metric_label]
 
-        if img_metric_df.empty:
-            st.warning("No ratings yet for that image / metric.")
-        else:
-            st.markdown(
-                f"### Ratings for **{selected_image}** – "
-                f"**{selected_metric_label}**"
-            )
+        # IMAGE TABS
+        image_options = sorted(
+            ratings_df["image_name"].dropna().unique().tolist()
+        )
 
-            # 🔥 Replace session IDs with simple participant numbers
-            img_metric_df = img_metric_df.reset_index(drop=True)
-            img_metric_df["participant"] = img_metric_df.index + 1
+        img_tabs = st.tabs(image_options)
 
-            # ❌ REMOVE the first graph (the big per-user bars)
-            # (You asked to remove it completely. So not showing it.)
+        for i, img_name in enumerate(image_options):
+            with img_tabs[i]:
 
-            # ✔ Only show the distribution graph
-            st.markdown("**Rating distribution (count of 1–5)**")
+                filt = (
+                    (ratings_df["metric"] == selected_metric) &
+                    (ratings_df["image_name"] == img_name)
+                )
+                img_metric_df = ratings_df[filt].copy()
 
-            dist_df = (
-                img_metric_df[["value_num"]]
-                .dropna()
-                .value_counts()
-                .reset_index(name="count")
-                .rename(columns={"value_num": "rating"})
-                .sort_values("rating")
-            )
+                if img_metric_df.empty:
+                    st.warning("No ratings yet for this image.")
+                else:
+                    st.markdown(f"### {selected_metric_label}")
 
-            # 🟦 Clean bar chart with NO points, ONLY bars
-            fig_dist = px.bar(
-                dist_df,
-                x="rating",
-                y="count",
-                labels={
-                    "rating": "Rating (1–5)",
-                    "count": "Number of responses",
-                },
-            )
-            fig_dist.update_traces(
-                width=0.4,
-                marker_color="#22c55e",
-                marker_line_width=0
-            )
-            fig_dist.update_xaxes(dtick=1)
-            fig_dist.update_layout(
-                height=420,
-                bargap=0.35,
-                title=None,
-                showlegend=False
-            )
-            st.plotly_chart(fig_dist, use_container_width=True)
+                    col_a, col_b = st.columns(2)
+
+                    # -----------------------------
+                    # Per-user bar (centered height, no weird ticks)
+                    # -----------------------------
+                    with col_a:
+                        per_user_df = (
+                            img_metric_df[["session_id", "value_num"]]
+                            .dropna()
+                            .groupby("session_id", as_index=False)
+                            .mean()
+                        )
+
+                        fig_user = px.bar(
+                            per_user_df,
+                            x="session_id",
+                            y="value_num",
+                            labels={
+                                "session_id": "Participant",
+                                "value_num": "Rating (1–5)"
+                            }
+                        )
+                        fig_user.update_traces(width=0.4, marker_color="#4f46e5")
+                        fig_user.update_yaxes(range=[1, 5], dtick=1)   # FIXED
+                        fig_user.update_layout(
+                            height=380,
+                            bargap=0.35,
+                            title=None,
+                        )
+                        st.plotly_chart(fig_user, use_container_width=True)
+
+                    # -----------------------------
+                    # Rating distribution
+                    # -----------------------------
+                    with col_b:
+                        dist_df = (
+                            img_metric_df[["value_num"]]
+                            .dropna()
+                            .value_counts()
+                            .reset_index(name="count")
+                            .rename(columns={"value_num": "rating"})
+                            .sort_values("rating")
+                        )
+
+                        st.markdown("**Rating distribution (count of 1–5)**")
+
+                        fig_dist = px.bar(
+                            dist_df,
+                            x="rating",
+                            y="count",
+                            labels={
+                                "rating": "Rating (1–5)",
+                                "count": "Responses"
+                            },
+                        )
+                        fig_dist.update_traces(width=0.4, marker_color="#22c55e")
+
+                        # FORCE AXES TO BE CLEAN
+                        fig_dist.update_xaxes(dtick=1)
+                        fig_dist.update_yaxes(dtick=1)
+
+                        fig_dist.update_layout(
+                            height=380,
+                            bargap=0.35,
+                            title=None,
+                        )
+                        st.plotly_chart(fig_dist, use_container_width=True)
 
 # ---------------------------------------------------
 # TAB 2: COMPARISONS
