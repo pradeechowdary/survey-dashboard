@@ -147,6 +147,9 @@ with tab1:
 # ---------------------------------------------------
 # TAB 2: COMPARISONS
 # ---------------------------------------------------
+# ---------------------------------------------------
+# TAB 2: COMPARISONS
+# ---------------------------------------------------
 with tab2:
     st.subheader("Comparisons")
 
@@ -163,7 +166,7 @@ with tab2:
     if ab_df.empty:
         st.warning("No comparison data yet.")
     else:
-        # list of raw keys: ab1, ab2...
+        # raw keys: ab1, ab2...
         comp_options = (
             ab_df["image_name"]
             .dropna()
@@ -171,44 +174,62 @@ with tab2:
             .tolist()
         )
 
-        # convert raw keys → pretty titles
+        # convert raw → pretty
         pretty_options = [
             COMPARISON_LABELS.get(x, x) for x in comp_options
         ]
 
-        # show pretty label, but keep raw key using mapping
+        # show pretty label
         selected_pretty = st.selectbox(
             "Choose comparison:",
             options=pretty_options,
             index=0
         )
 
-        # find raw key from pretty label
+        # map back to raw key
         selected_comp = (
             [k for k, v in COMPARISON_LABELS.items() if v == selected_pretty][0]
         )
 
+        # isolate responses for this comparison
         this_ab = ab_df[ab_df["image_name"] == selected_comp].copy()
         this_ab["choice"] = this_ab["value"]
 
-        summary = this_ab["choice"].value_counts().reset_index()
+        # force fixed order A → B → Neither
+        order = ["A", "B", "Neither"]
+
+        summary = (
+            this_ab["choice"]
+            .value_counts()
+            .reindex(order, fill_value=0)
+            .reset_index()
+        )
         summary.columns = ["choice", "count"]
 
         st.markdown(f"### Results for **{selected_pretty}**")
 
+        # Bar chart
         fig_ab = px.bar(
             summary,
             x="choice",
             y="count",
+            category_orders={"choice": order},
             labels={
                 "choice": "Choice (A / B / Neither)",
                 "count": "Number of responses",
             },
         )
-        fig_ab.update_traces(width=0.4, marker_color="#f97316")
-        fig_ab.update_layout(bargap=0.35, height=420)
+
+        fig_ab.update_traces(width=0.45, marker_color="#f97316")
+        fig_ab.update_layout(
+            bargap=0.32,
+            height=420,
+            title=None,
+        )
+
         st.plotly_chart(fig_ab, use_container_width=True)
 
+        # Raw data for debugging
         with st.expander("Raw comparison responses"):
             st.dataframe(
                 this_ab[["timestamp", "session_id", "image_name", "value"]],
