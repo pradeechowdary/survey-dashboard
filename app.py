@@ -109,7 +109,7 @@ with tab1:
         )
         image_tabs = st.tabs(image_options)
 
-        # Loop through all image tabs
+        # Loop through image tabs
         for idx, img in enumerate(image_options):
             with image_tabs[idx]:
 
@@ -123,7 +123,7 @@ with tab1:
                 if img_metric_df.empty:
                     st.info("No data yet for this image.")
                 else:
-                    # Distribution (clean green bar plot)
+                    # Distribution clean bar plot
                     dist_df = (
                         img_metric_df[["value_num"]]
                         .dropna()
@@ -152,8 +152,8 @@ with tab1:
                         yaxis_title="Responses",
                     )
 
-                    st.plotly_chart(fig_dist, use_container_width=True)
-
+                    # 🔥 UNIQUE KEY FIX
+                    st.plotly_chart(fig_dist, use_container_width=True, key=f"dist_{img}")
 
 # ---------------------------------------------------
 # TAB 2: COMPARISONS
