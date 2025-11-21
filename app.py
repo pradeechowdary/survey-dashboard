@@ -95,7 +95,7 @@ with tab1:
         for i, img_name in enumerate(images):
             with img_tabs[i]:   # unique tab = no duplicate element errors
 
-                st.markdown(f"### **Liked / Likely to Act — {img_name}**")
+                st.markdown("## Liked / Likely to Act")
 
                 # Filter rows for this image
                 d = act_df[act_df["image_name"] == img_name].copy()
