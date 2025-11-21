@@ -75,74 +75,84 @@ tab1, tab2, tab3, tab4 = st.tabs(
 )
 
 # ---------------------------------------------------
-# TAB 1: IMAGE RATINGS  ★ CLEAN VERSION ★
+# TAB 1: IMAGE RATINGS (act, mot, trust)
 # ---------------------------------------------------
 with tab1:
-    st.subheader("Liked / Likely to Act (1–5 Ratings Only)")
+    st.subheader("Image Ratings (1–5)")
 
-    # Only keep ACT metric (you said you want ONLY liked/likely to act)
-    act_df = df[(df["type"] == "rating") & (df["metric"] == "act")].copy()
+    ratings_df = df[df["type"] == "rating"].copy()
 
-    if act_df.empty:
-        st.warning("No 'act' (liked/likely to act) rating data found yet.")
+    if ratings_df.empty:
+        st.warning("No rating data found yet.")
     else:
-        # list of all images that have act ratings
-        images = sorted(act_df["image_name"].dropna().unique().tolist())
 
-        # build tabs dynamically (one per image)
-        img_tabs = st.tabs(images)
+        # Metric select (act, mot, trust)
+        metric_choice = st.selectbox(
+            "Select rating dimension:",
+            ["Liked / Likely to Act", "Motivating", "Trustworthy"]
+        )
 
-        for i, img_name in enumerate(images):
-            with img_tabs[i]:   # unique tab = no duplicate element errors
+        # map UI → raw metric key
+        metric_map = {
+            "Liked / Likely to Act": "act",
+            "Motivating": "mot",
+            "Trustworthy": "trust"
+        }
+        selected_metric = metric_map[metric_choice]
 
-                st.markdown("## Liked / Likely to Act")
+        # Create tabset for images
+        image_options = sorted(
+            ratings_df["image_name"]
+            .dropna()
+            .unique()
+            .tolist()
+        )
+        image_tabs = st.tabs(image_options)
 
-                # Filter rows for this image
-                d = act_df[act_df["image_name"] == img_name].copy()
+        # Loop through all image tabs
+        for idx, img in enumerate(image_options):
+            with image_tabs[idx]:
 
-                # --------- ONLY SHOW GREEN DISTRIBUTION CHART ----------
-                # Count distribution (1–5)
-                dist = (
-                    d[["value_num"]]
-                    .dropna()
-                    .value_counts()
-                    .reset_index(name="count")
-                    .rename(columns={"value_num": "rating"})
-                    .sort_values("rating")
-                )
+                st.markdown(f"### {metric_choice} — {img}")
 
-                # Fix missing ratings 1–5 (fill zeros)
-                all_ratings = pd.DataFrame({"rating": [1, 2, 3, 4, 5]})
-                dist = all_ratings.merge(dist, on="rating", how="left").fillna(0)
+                img_metric_df = ratings_df[
+                    (ratings_df["metric"] == selected_metric) &
+                    (ratings_df["image_name"] == img)
+                ].copy()
 
-                fig = px.bar(
-                    dist,
-                    x="rating",
-                    y="count",
-                    labels={
-                        "rating": "Rating (1–5)",
-                        "count": "Responses",
-                    },
-                )
+                if img_metric_df.empty:
+                    st.info("No data yet for this image.")
+                else:
+                    # Distribution (clean green bar plot)
+                    dist_df = (
+                        img_metric_df[["value_num"]]
+                        .dropna()
+                        .value_counts()
+                        .reset_index(name="count")
+                        .rename(columns={"value_num": "rating"})
+                        .sort_values("rating")
+                    )
 
-                # PURE green chart
-                fig.update_traces(
-                    marker_color="#22c55e",
-                    width=0.45,
-                    showlegend=False
-                )
+                    fig_dist = px.bar(
+                        dist_df,
+                        x="rating",
+                        y="count",
+                        labels={
+                            "rating": "Rating (1–5)",
+                            "count": "Responses",
+                        },
+                    )
 
-                # Clean Y axis: no decimals, no floats
-                fig.update_yaxes(dtick=1, range=[0, max(dist["count"].max(), 1) + 1])
+                    fig_dist.update_traces(marker_color="#22c55e", width=0.55)
+                    fig_dist.update_xaxes(dtick=1)
+                    fig_dist.update_layout(
+                        height=420,
+                        bargap=0.3,
+                        title=None,
+                        yaxis_title="Responses",
+                    )
 
-                # Remove title completely (kills undefined issue)
-                fig.update_layout(
-                    title=None,
-                    bargap=0.25,
-                    height=420
-                )
-
-                st.plotly_chart(fig, use_container_width=True, key=f"actplot_{img_name}")
+                    st.plotly_chart(fig_dist, use_container_width=True)
 
 
 # ---------------------------------------------------
