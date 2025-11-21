@@ -95,14 +95,12 @@ with tab1:
                 .unique()
                 .tolist()
             )
-            # only keep ones we know about
             metric_options = [METRIC_LABELS[m] for m in raw_metrics if m in METRIC_LABELS]
 
             selected_metric_label = st.selectbox(
                 "Rating dimension:",
                 options=sorted(metric_options),
                 index=0,
-                help="How we evaluate the message.",
             )
             selected_metric = INV_METRIC_LABELS[selected_metric_label]
 
@@ -134,66 +132,48 @@ with tab1:
                 f"**{selected_metric_label}**"
             )
 
-            col_a, col_b = st.columns(2)
+            # 🔥 Replace session IDs with simple participant numbers
+            img_metric_df = img_metric_df.reset_index(drop=True)
+            img_metric_df["participant"] = img_metric_df.index + 1
 
-            # 1) Per-user rating (x = session, y = 1–5)
-            with col_a:
-                st.markdown("**Per-participant rating**")
-                per_user_df = (
-                    img_metric_df[["session_id", "value_num"]]
-                    .dropna()
-                    .groupby("session_id", as_index=False)
-                    .mean()
-                )
+            # ❌ REMOVE the first graph (the big per-user bars)
+            # (You asked to remove it completely. So not showing it.)
 
-                fig_user = px.bar(
-                    per_user_df,
-                    x="session_id",
-                    y="value_num",
-                    labels={
-                        "session_id": "Participant (session_id)",
-                        "value_num": "Rating (1–5)",
-                    },
-                )
-                fig_user.update_traces(width=0.4, marker_color="#4f46e5")
-                fig_user.update_yaxes(range=[1, 5], dtick=1)
-                fig_user.update_layout(
-                    xaxis_tickangle=-45,
-                    height=420,
-                    bargap=0.35,
-                    title=None,
-                )
-                st.plotly_chart(fig_user, use_container_width=True)
+            # ✔ Only show the distribution graph
+            st.markdown("**Rating distribution (count of 1–5)**")
 
-            # 2) Distribution of ratings 1–5
-            with col_b:
-                st.markdown("**Rating distribution (count of 1–5)**")
-                dist_df = (
-                    img_metric_df[["value_num"]]
-                    .dropna()
-                    .value_counts()
-                    .reset_index(name="count")
-                    .rename(columns={"value_num": "rating"})
-                    .sort_values("rating")
-                )
+            dist_df = (
+                img_metric_df[["value_num"]]
+                .dropna()
+                .value_counts()
+                .reset_index(name="count")
+                .rename(columns={"value_num": "rating"})
+                .sort_values("rating")
+            )
 
-                fig_dist = px.bar(
-                    dist_df,
-                    x="rating",
-                    y="count",
-                    labels={
-                        "rating": "Rating (1–5)",
-                        "count": "Number of responses",
-                    },
-                )
-                fig_dist.update_traces(width=0.4, marker_color="#22c55e")
-                fig_dist.update_xaxes(dtick=1)
-                fig_dist.update_layout(
-                    height=420,
-                    bargap=0.35,
-                    title=None,
-                )
-                st.plotly_chart(fig_dist, use_container_width=True)
+            # 🟦 Clean bar chart with NO points, ONLY bars
+            fig_dist = px.bar(
+                dist_df,
+                x="rating",
+                y="count",
+                labels={
+                    "rating": "Rating (1–5)",
+                    "count": "Number of responses",
+                },
+            )
+            fig_dist.update_traces(
+                width=0.4,
+                marker_color="#22c55e",
+                marker_line_width=0
+            )
+            fig_dist.update_xaxes(dtick=1)
+            fig_dist.update_layout(
+                height=420,
+                bargap=0.35,
+                title=None,
+                showlegend=False
+            )
+            st.plotly_chart(fig_dist, use_container_width=True)
 
 # ---------------------------------------------------
 # TAB 2: COMPARISONS
